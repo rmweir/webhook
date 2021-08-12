@@ -96,24 +96,13 @@ func listenAndServe(ctx context.Context, clients *clients.Clients, handler http.
 		// Sleep here to make sure server is listening and all caches are primed
 		time.Sleep(15 * time.Second)
 
+		validationUrl := "https://<addurl>.ngrok.io/v1/webhook/validation"
 		validationClientConfig := v1.WebhookClientConfig{
-			Service: &v1.ServiceReference{
-				Namespace: namespace,
-				Name:      serviceName,
-				Path:      &validationPath,
-				Port:      &port,
-			},
-			CABundle: secret.Data[corev1.TLSCertKey],
+			URL: &validationUrl,
 		}
-
+		mutationUrl := "https://<addurl>.ngrok.io/v1/webhook/mutation"
 		mutationClientConfig := v1.WebhookClientConfig{
-			Service: &v1.ServiceReference{
-				Namespace: namespace,
-				Name:      serviceName,
-				Path:      &mutationPath,
-				Port:      &port,
-			},
-			CABundle: secret.Data[corev1.TLSCertKey],
+			URL: &mutationUrl,
 		}
 
 		return secret, apply.WithOwner(secret).ApplyObjects(&v1.ValidatingWebhookConfiguration{
@@ -217,6 +206,18 @@ func listenAndServe(ctx context.Context, clients *clients.Clients, handler http.
 								APIVersions: []string{"v1"},
 								Resources:   []string{"clusters"},
 								Scope:       &namespaceScope,
+							},
+						},
+						{
+							Operations: []v1.OperationType{
+								v1.Delete,
+								v1.Update,
+							},
+							Rule: v1.Rule{
+								APIGroups:   []string{"management.cattle.io"},
+								APIVersions: []string{"v3"},
+								Resources:   []string{"settings"},
+								Scope:       &clusterScope,
 							},
 						},
 					},
